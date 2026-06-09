@@ -1,5 +1,6 @@
 # Controlled AI Consultant Pipeline
 
+v1.0
 Мінімальний API-сервіс AI-консультанта: приймає питання українською, знаходить релевантний контекст у `knowledge_base.md` і повертає structured JSON-відповідь.
 
 ## Запуск
