@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env.local
+traces.jsonl
+.pytest_cache/
+.mypy_cache/
+.DS_Store
