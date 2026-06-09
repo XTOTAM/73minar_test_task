@@ -5,7 +5,8 @@
 ## Запуск
 
 ```bash
-python -m venv .venv
+python -m venv .venv 
+# python3 -m venv .venv (for MacOS)
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
@@ -14,6 +15,14 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Перевірка: `GET http://localhost:8000/health`
+
+## Веб-форма для тесту
+
+Після запуску сервера відкрийте в браузері:
+
+**http://localhost:8000/**
+
+Проста HTML-сторінка для швидкого POST на `/ask`: введіть питання, натисніть «Надіслати» (або `Ctrl/Cmd + Enter`). Показує відповідь, confidence, джерела та сирий JSON.
 
 ## Endpoint
 

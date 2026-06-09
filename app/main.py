@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from openai import OpenAI
 
 from app.config import settings
@@ -25,6 +27,13 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+
+
+@app.get("/")
+async def demo_page() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/health")

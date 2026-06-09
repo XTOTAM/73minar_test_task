@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Consultant — тест POST /ask</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface-2: #243044;
+      --border: #2d3f56;
+      --text: #e8eef5;
+      --muted: #8fa3bc;
+      --accent: #5b9cf5;
+      --accent-hover: #7ab0ff;
+      --success: #3ecf8e;
+      --warning: #f0b429;
+      --danger: #f07178;
+      --radius: 14px;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(ellipse 80% 60% at 10% -10%, rgba(91, 156, 245, 0.18), transparent),
+        radial-gradient(ellipse 70% 50% at 100% 0%, rgba(62, 207, 142, 0.1), transparent),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      padding: 2rem 1rem 3rem;
+    }
+
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 1.75rem;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(91, 156, 245, 0.12);
+      border: 1px solid rgba(91, 156, 245, 0.25);
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      margin-bottom: 0.75rem;
+    }
+
+    h1 {
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.35rem;
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 0.55rem;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font: inherit;
+      padding: 0.85rem 1rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(91, 156, 245, 0.2);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      margin-top: 1rem;
+      align-items: center;
+    }
+
+    button {
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 600;
+      border-radius: 10px;
+      padding: 0.7rem 1.25rem;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
+    }
+
+    button:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0b1220;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      color: var(--text);
+      border-color: var(--muted);
+    }
+
+    .status {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    .status.loading {
+      color: var(--accent);
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .answer-text {
+      font-size: 1.05rem;
+      margin-bottom: 1rem;
+      white-space: pre-wrap;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--muted);
+    }
+
+    .pill.confidence-high { color: var(--success); border-color: rgba(62, 207, 142, 0.35); }
+    .pill.confidence-medium { color: var(--warning); border-color: rgba(240, 180, 41, 0.35); }
+    .pill.confidence-low { color: var(--danger); border-color: rgba(240, 113, 120, 0.35); }
+
+    .sources h3,
+    .raw h3 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.65rem;
+    }
+
+    .source-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 0.9rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .source-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .source-section {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .source-chunk {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .source-score {
+      margin-top: 0.35rem;
+      font-size: 0.75rem;
+      color: var(--accent);
+    }
+
+    pre {
+      background: #0b1018;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      overflow-x: auto;
+      font-size: 0.8rem;
+      line-height: 1.45;
+      color: #b8c8dc;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-top: 1.5rem;
+    }
+
+    footer code {
+      color: var(--accent);
+      font-size: 0.85em;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="badge">POST /ask</span>
+      <h1>AI Consultant</h1>
+      <p class="subtitle">Введіть питання українською — отримаєте structured JSON-відповідь з бази знань.</p>
+    </header>
+
+    <section class="card">
+      <label for="question">Ваше питання</label>
+      <textarea
+        id="question"
+        placeholder="Наприклад: Чи може працівник взяти щорічну відпустку після 3 місяців роботи?"
+      ></textarea>
+      <div class="actions">
+        <button type="button" class="btn-primary" id="submit">Надіслати</button>
+        <button type="button" class="btn-ghost" id="example">Приклад</button>
+        <span class="status" id="status"></span>
+      </div>
+    </section>
+
+    <section class="card hidden" id="result">
+      <div class="meta" id="meta"></div>
+      <p class="answer-text" id="answer"></p>
+      <div class="sources hidden" id="sources-block">
+        <h3>Джерела</h3>
+        <div id="sources"></div>
+      </div>
+      <details class="raw" style="margin-top: 1rem;">
+        <summary style="cursor: pointer; color: var(--muted); font-size: 0.85rem;">Сирий JSON</summary>
+        <pre id="raw-json"></pre>
+      </details>
+    </section>
+
+    <footer>
+      API: <code>POST /ask</code> · Health: <code>GET /health</code>
+    </footer>
+  </div>
+
+  <script>
+    const questionEl = document.getElementById("question");
+    const submitBtn = document.getElementById("submit");
+    const exampleBtn = document.getElementById("example");
+    const statusEl = document.getElementById("status");
+    const resultEl = document.getElementById("result");
+    const metaEl = document.getElementById("meta");
+    const answerEl = document.getElementById("answer");
+    const sourcesBlock = document.getElementById("sources-block");
+    const sourcesEl = document.getElementById("sources");
+    const rawJsonEl = document.getElementById("raw-json");
+
+    const EXAMPLE =
+      "Чи може працівник взяти щорічну відпустку після 3 місяців роботи?";
+
+    exampleBtn.addEventListener("click", () => {
+      questionEl.value = EXAMPLE;
+      questionEl.focus();
+    });
+
+    async function ask() {
+      const question = questionEl.value.trim();
+      if (!question) {
+        statusEl.textContent = "Введіть питання";
+        statusEl.className = "status error";
+        questionEl.focus();
+        return;
+      }
+
+      submitBtn.disabled = true;
+      statusEl.textContent = "Надсилаю запит…";
+      statusEl.className = "status loading";
+      resultEl.classList.add("hidden");
+
+      try {
+        const res = await fetch("/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.detail || `HTTP ${res.status}`);
+        }
+
+        renderResult(data);
+        statusEl.textContent = `Готово · ${data.latency_ms ?? "—"} ms`;
+        statusEl.className = "status";
+      } catch (err) {
+        statusEl.textContent = err.message || "Помилка запиту";
+        statusEl.className = "status error";
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+
+    function renderResult(data) {
+      answerEl.textContent = data.answer || "—";
+
+      metaEl.innerHTML = "";
+      const pills = [
+        ["confidence", data.confidence],
+        ["trace", data.trace_id],
+        ["latency", data.latency_ms != null ? `${data.latency_ms} ms` : null],
+        ["fallback", data.fallback_reason],
+      ];
+
+      for (const [kind, value] of pills) {
+        if (!value) continue;
+        const span = document.createElement("span");
+        span.className = "pill";
+        if (kind === "confidence") {
+          span.classList.add(`confidence-${value}`);
+          span.textContent = `confidence: ${value}`;
+        } else if (kind === "trace") {
+          span.textContent = `trace: ${value}`;
+        } else if (kind === "latency") {
+          span.textContent = value;
+        } else {
+          span.textContent = `fallback: ${value}`;
+        }
+        metaEl.appendChild(span);
+      }
+
+      const sources = data.sources || [];
+      if (sources.length) {
+        sourcesBlock.classList.remove("hidden");
+        sourcesEl.innerHTML = sources
+          .map(
+            (s) => `
+          <article class="source-item">
+            <div class="source-section">${escapeHtml(s.section || "—")}</div>
+            <div class="source-chunk">${escapeHtml(s.chunk || "")}</div>
+            ${
+              s.score != null
+                ? `<div class="source-score">score: ${Number(s.score).toFixed(2)}</div>`
+                : ""
+            }
+          </article>`
+          )
+          .join("");
+      } else {
+        sourcesBlock.classList.add("hidden");
+      }
+
+      rawJsonEl.textContent = JSON.stringify(data, null, 2);
+      resultEl.classList.remove("hidden");
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    submitBtn.addEventListener("click", ask);
+    questionEl.addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        ask();
+      }
+    });
+  </script>
+</body>
+</html>
