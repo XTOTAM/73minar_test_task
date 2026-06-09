@@ -1,5 +1,6 @@
 import time
 import uuid
+from dataclasses import dataclass
 
 from openai import OpenAI
 
@@ -13,10 +14,19 @@ from app.pipeline.tracer import TraceLogger
 from app.pipeline.validator import AnswerValidator
 
 
+@dataclass
+class IndexMetadata:
+    knowledge_base_path: str
+    chunk_count: int
+    sections: list[str]
+    build_duration_ms: int
+
+
 class ConsultantPipeline:
     def __init__(self, settings: Settings, openai_client: OpenAI) -> None:
         self._settings = settings
         self._index: KnowledgeIndex | None = None
+        self._index_meta: IndexMetadata | None = None
         self._retriever = HybridRetriever(
             openai_client=openai_client,
             embedding_model=settings.openai_embedding_model,
@@ -29,20 +39,43 @@ class ConsultantPipeline:
         self._tracer = TraceLogger(settings.traces_path)
         self._index_builder = IndexBuilder(openai_client, settings.openai_embedding_model)
 
-    def build_index(self) -> None:
+    def build_index(self) -> IndexMetadata:
+        started = time.perf_counter()
         chunks = chunk_knowledge_base(
             self._settings.knowledge_base_path,
             max_chunk_tokens=self._settings.max_chunk_tokens,
         )
         self._index = self._index_builder.build(chunks)
+        self._index_meta = IndexMetadata(
+            knowledge_base_path=str(self._settings.knowledge_base_path),
+            chunk_count=len(chunks),
+            sections=[chunk.section for chunk in chunks],
+            build_duration_ms=int((time.perf_counter() - started) * 1000),
+        )
+        return self._index_meta
+
+    def _load_context_stage(self) -> PipelineStage:
+        if self._index_meta is None:
+            raise RuntimeError("Knowledge index metadata is not initialized")
+
+        return PipelineStage(
+            name="load_context",
+            duration_ms=self._index_meta.build_duration_ms,
+            details={
+                "knowledge_base_path": self._index_meta.knowledge_base_path,
+                "chunk_count": self._index_meta.chunk_count,
+                "sections_indexed": self._index_meta.sections,
+                "loaded_at": "startup",
+            },
+        )
 
     async def ask(self, question: str) -> AskResponse:
-        if self._index is None:
+        if self._index is None or self._index_meta is None:
             raise RuntimeError("Knowledge index is not initialized")
 
         trace_id = str(uuid.uuid4())
         started = time.perf_counter()
-        stages: list[PipelineStage] = []
+        stages: list[PipelineStage] = [self._load_context_stage()]
         error: str | None = None
 
         try:

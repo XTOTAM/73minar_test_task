@@ -96,7 +96,7 @@ curl -s -X POST http://localhost:8000/ask \
 
 Кожен запит пишеться в `traces.jsonl` (JSON Lines):
 - `trace_id`, `timestamp`, `question`
-- `stages`: receive_request → retrieve_context → generate_answer → validate_answer → return_response
+- `stages`: load_context → receive_request → retrieve_context → generate_answer → validate_answer → return_response
 - знайдені `sources`, фінальна `answer`, `confidence`, `fallback_reason`, `latency_ms`, `error`
 
 ## Evaluation

@@ -40,6 +40,8 @@ EXPECTED = {
     },
 }
 
+EXAMPLE_IDS = ("q001", "q004", "q005")
+
 
 def assess(item_id: str, response: dict) -> tuple[str, str]:
     expected = EXPECTED[item_id]
@@ -74,9 +76,71 @@ def assess(item_id: str, response: dict) -> tuple[str, str]:
     return status, "; ".join(notes) if notes else "відповідає очікуванням"
 
 
+def _truncate_chunk(text: str, limit: int = 180) -> str:
+    if len(text) <= limit:
+        return text
+    return text[:limit].rstrip() + "..."
+
+
+def format_response_excerpt(data: dict, max_sources: int = 2) -> dict:
+    return {
+        "answer": data.get("answer"),
+        "sources": [
+            {
+                "section": source["section"],
+                "chunk": _truncate_chunk(source.get("chunk", "")),
+                "score": source.get("score"),
+            }
+            for source in data.get("sources", [])[:max_sources]
+        ],
+        "confidence": data.get("confidence"),
+        "fallback_reason": data.get("fallback_reason"),
+        "trace_id": data.get("trace_id"),
+        "latency_ms": data.get("latency_ms"),
+    }
+
+
+def format_example_section(item_id: str, question: str, data: dict, title: str) -> str:
+    request_json = json.dumps({"question": question}, ensure_ascii=False, indent=2)
+    response_json = json.dumps(format_response_excerpt(data), ensure_ascii=False, indent=2)
+    return f"""### {title}
+
+**Request:**
+```json
+{request_json}
+```
+
+**Response (фрагмент з реального прогону):**
+```json
+{response_json}
+```
+"""
+
+
+def build_examples_section(results: dict[str, dict]) -> str:
+    titles = {
+        "q001": "q001 — grounded answer",
+        "q004": "q004 — fallback (точна дата)",
+        "q005": "q005 — fallback (розрахунок)",
+    }
+    parts = ["## Приклади request/response\n"]
+    for item_id in EXAMPLE_IDS:
+        item = results[item_id]
+        parts.append(
+            format_example_section(
+                item_id,
+                item["question"],
+                item["response"],
+                titles[item_id],
+            )
+        )
+    return "\n".join(parts)
+
+
 def main() -> int:
     questions = json.loads(QUESTIONS_PATH.read_text(encoding="utf-8"))
     rows: list[str] = []
+    results: dict[str, dict] = {}
 
     with httpx.Client(timeout=120.0) as client:
         for item in questions:
@@ -94,12 +158,15 @@ def main() -> int:
                     "latency_ms": 0,
                 }
 
+            results[item["id"]] = {"question": item["question"], "response": data}
             status, comment = assess(item["id"], data)
             rows.append(
                 f"| {item['id']} | {item['question'][:50]}... | "
                 f"{data.get('confidence')} | {data.get('fallback_reason')} | "
                 f"{EXPECTED[item['id']]['behavior']} | {status} | {comment} |"
             )
+
+    examples_section = build_examples_section(results)
 
     report = f"""# Evaluation Report
 
@@ -110,6 +177,8 @@ def main() -> int:
 | ID | Питання | Confidence | Fallback | Очікувана поведінка | Статус | Коментар |
 |----|---------|------------|----------|---------------------|--------|----------|
 {chr(10).join(rows)}
+
+{examples_section}
 
 ## Висновки
 
